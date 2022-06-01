@@ -3,12 +3,52 @@
  */
 package ru.clevertec.racing;
 
+import ru.clevertec.racing.model.Car;
+
+import java.util.Random;
+import java.util.Scanner;
+import java.util.concurrent.CountDownLatch;
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
+
+    private static final CountDownLatch START = new CountDownLatch(3);
+
+    public static void main(String[] args) throws InterruptedException {
+
+        Random random = new Random();
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Количество авто: ");
+        int car = scanner.nextInt();
+        System.out.println("Длина трассы (м): ");
+        Integer lengthRoute = scanner.nextInt();
+        System.out.println(car + " " + lengthRoute);
+        for (int i = 0; i < car; i++) {
+            new Thread(() -> {
+                try {
+                    startRace(new Car(random.nextInt(5, 20)), lengthRoute);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
+        }
+        Thread.sleep(1000);
+        System.out.println("3");
+        START.countDown();
+        Thread.sleep(1000);
+        System.out.println("2");
+        START.countDown();
+        Thread.sleep(1000);
+        System.out.println("1");
+        START.countDown();
     }
 
-    public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+    public static void startRace(Car car, Integer lengthRoute) throws InterruptedException {
+        System.out.println("Болид №" + car.toString() + " на старте!");
+        START.await();
+        while (lengthRoute > 0) {
+            lengthRoute = lengthRoute - car.getSpeed();
+            System.out.println("Болид №" + car.getName() + " до финиша " + (lengthRoute >= 0 ? lengthRoute : 0) + " м.");
+        }
+        System.out.println("Финишировал: " + car);
     }
 }
