@@ -5,50 +5,43 @@ package ru.clevertec.racing;
 
 import ru.clevertec.racing.model.Car;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 
 public class App {
+    private static final Phaser phaser = new Phaser(1);
 
-    private static final CountDownLatch START = new CountDownLatch(3);
-
-    public static void main(String[] args) throws InterruptedException {
-
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Random random = new Random();
-        Scanner scanner = new Scanner(System.in);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("Количество авто: ");
-        int car = scanner.nextInt();
+        int car = Integer.parseInt(reader.readLine());
         System.out.println("Длина трассы (м): ");
-        Integer lengthRoute = scanner.nextInt();
-        System.out.println(car + " " + lengthRoute);
+        Integer lengthRoute = Integer.parseInt(reader.readLine());
+        ExecutorService executorService = Executors.newFixedThreadPool(car);
+        List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < car; i++) {
-            new Thread(() -> {
-                try {
-                    startRace(new Car(random.nextInt(5, 20)), lengthRoute);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }).start();
+            futures.add(executorService.submit(new Car(random.nextInt(5, 20), lengthRoute, phaser)));
         }
+//        for (Future<?> future: futures){
+//            future.get();
+//        }
         Thread.sleep(1000);
         System.out.println("3");
-        START.countDown();
         Thread.sleep(1000);
         System.out.println("2");
-        START.countDown();
         Thread.sleep(1000);
         System.out.println("1");
-        START.countDown();
-    }
-
-    public static void startRace(Car car, Integer lengthRoute) throws InterruptedException {
-        System.out.println("Болид №" + car.toString() + " на старте!");
-        START.await();
-        while (lengthRoute > 0) {
-            lengthRoute = lengthRoute - car.getSpeed();
-            System.out.println("Болид №" + car.getName() + " до финиша " + (lengthRoute >= 0 ? lengthRoute : 0) + " м.");
-        }
-        System.out.println("Финишировал: " + car);
+        Thread.sleep(1000);
+        System.out.println("СТАРТ");
+        phaser.arrive();
+        executorService.shutdown();
+        if (executorService.awaitTermination(5, TimeUnit.SECONDS))
+            System.out.println("!!!!!!!!!!!!!!!");
     }
 }
