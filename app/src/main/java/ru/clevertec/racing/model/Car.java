@@ -1,19 +1,15 @@
 package ru.clevertec.racing.model;
 
-import org.checkerframework.checker.units.qual.A;
-
-import java.util.concurrent.Phaser;
+import java.sql.Time;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Car implements Runnable {
-    private Integer speed;
-    private Integer numberCar;
+public class Car implements Callable<Car> {
+    private final Integer speed;
+    private final Integer numberCar;
     private Double time;
-    private Phaser phaser;
+    private final Phaser phaser;
     private Integer lengthRoute;
-
-    public static final AtomicInteger winner = new AtomicInteger(0);
-
     private static final AtomicInteger aCount = new AtomicInteger(0);
 
     public Car(Integer speed, Integer lengthRoute, Phaser phaser) {
@@ -21,7 +17,7 @@ public class Car implements Runnable {
         this.lengthRoute = lengthRoute;
         this.phaser = phaser;
         this.numberCar = aCount.incrementAndGet();
-        this.time = 0d;
+        this.time = lengthRoute * 1.00 / this.getSpeed();
         phaser.register();
     }
 
@@ -41,34 +37,31 @@ public class Car implements Runnable {
         this.time = time;
     }
 
-    public void setWinner() {
-        winner.compareAndSet(0, numberCar);
-    }
-
-    public AtomicInteger getWinner() {
-        return this.winner;
-    }
-
     @Override
     public String toString() {
         return "Болид №" + numberCar;
     }
 
     @Override
-    public void run() {
-        System.out.println(this + " на старте! " + this.getSpeed());
+    public Car call() {
+        System.out.printf("%s на старте! %n", this);
+        var lastLength = lengthRoute % speed;
         phaser.arriveAndAwaitAdvance();
-        this.setTime(Double.valueOf(lengthRoute) / Double.valueOf(this.getSpeed()));
-        while (lengthRoute > 0) {
+        while (lengthRoute > lastLength) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
-            lengthRoute -= this.getSpeed();
-            System.out.println(this + " до финиша " + (lengthRoute >= 0 ? lengthRoute : 0) + " м.");
+            lengthRoute -= speed;
+            System.out.printf("%s до финиша %s м.%n", this, (lengthRoute >= 0 ? lengthRoute : 0));
         }
-        setWinner();
-        System.out.printf("Финишировал: %s время %.2f\n", this, this.getTime());
+        try {
+            Thread.sleep((long) ((lastLength * 1.0 / speed) * 1000L));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.printf("Финишировал: %s время %.2f %n", this, time);
+        return this;
     }
 }

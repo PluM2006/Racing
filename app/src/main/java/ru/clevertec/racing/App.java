@@ -9,28 +9,27 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 
 public class App {
-    private static final Phaser phaser = new Phaser(1);
+    private static final Phaser phaser = new Phaser();
 
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Random random = new Random();
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("Количество авто: ");
-        int car = Integer.parseInt(reader.readLine());
+        int amountCar = Integer.parseInt(reader.readLine());
         System.out.println("Длина трассы (м): ");
         Integer lengthRoute = Integer.parseInt(reader.readLine());
-        ExecutorService executorService = Executors.newFixedThreadPool(car);
+        ExecutorService executorService = Executors.newFixedThreadPool(amountCar);
         List<Future<?>> futures = new ArrayList<>();
-        for (int i = 0; i < car; i++) {
-            futures.add(executorService.submit(new Car(random.nextInt(5, 20), lengthRoute, phaser)));
+        phaser.register();
+        for (int i = 0; i < amountCar; i++) {
+            futures.add(executorService.submit(new Car(random.nextInt(30, 60), lengthRoute, phaser)));
         }
-//        for (Future<?> future: futures){
-//            future.get();
-//        }
         Thread.sleep(1000);
         System.out.println("3");
         Thread.sleep(1000);
@@ -40,8 +39,18 @@ public class App {
         Thread.sleep(1000);
         System.out.println("СТАРТ");
         phaser.arrive();
+        List<Car> cars = new ArrayList<>();
+        for (Future<?> future : futures) {
+            cars.add((Car) future.get());
+        }
         executorService.shutdown();
-        if (executorService.awaitTermination(5, TimeUnit.SECONDS))
-            System.out.println("!!!!!!!!!!!!!!!");
+        if (executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+            Car winner = cars
+                    .stream()
+                    .min(Comparator.comparingDouble(Car::getTime))
+                    .orElse(null);
+            System.out.printf("%n В ГОНКЕ ПОБЕДИЛ %s !!!%n", winner);
+        }
+
     }
 }
