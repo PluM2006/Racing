@@ -19,26 +19,27 @@ public class Car implements Callable<Car> {
         this.phaser = phaser;
         this.numberCar = aCount.incrementAndGet();
         phaser.register();
-
-
     }
 
     public Integer getSpeed() {
         return this.speed;
     }
+
     public Integer getNumberCar() {
         return this.numberCar;
     }
-    private void setWinner(int numberCar){
+
+    private void setWinner(int numberCar) {
         winner.compareAndSet(0, numberCar);
     }
+
     @Override
     public String toString() {
         return "Болид №" + numberCar;
     }
+
     @Override
     public Car call() {
-
         Random random = new Random();
         try {
             Thread.sleep(random.nextInt(10, 2000));
@@ -49,7 +50,7 @@ public class Car implements Callable<Car> {
         phaser.arriveAndAwaitAdvance();
         var lastLength = lengthRoute % speed;
         phaser.arriveAndAwaitAdvance();
-        var time = lengthRoute*1.0/speed;
+        var time = lengthRoute * 1.0 / speed;
         while (lengthRoute > lastLength) {
             try {
                 Thread.sleep(1000);
