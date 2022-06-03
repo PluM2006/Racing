@@ -1,13 +1,14 @@
 package ru.clevertec.racing.model;
 
-import java.sql.Time;
-import java.util.concurrent.*;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Car implements Callable<Car> {
+    public static final AtomicInteger winner = new AtomicInteger(0);
     private final Integer speed;
     private final Integer numberCar;
-    private Double time;
     private final Phaser phaser;
     private Integer lengthRoute;
     private static final AtomicInteger aCount = new AtomicInteger(0);
@@ -17,36 +18,38 @@ public class Car implements Callable<Car> {
         this.lengthRoute = lengthRoute;
         this.phaser = phaser;
         this.numberCar = aCount.incrementAndGet();
-        this.time = lengthRoute * 1.00 / this.getSpeed();
         phaser.register();
+
+
     }
 
     public Integer getSpeed() {
         return this.speed;
     }
-
     public Integer getNumberCar() {
         return this.numberCar;
     }
-
-    public Double getTime() {
-        return this.time;
+    private void setWinner(int numberCar){
+        winner.compareAndSet(0, numberCar);
     }
-
-    public void setTime(Double time) {
-        this.time = time;
-    }
-
     @Override
     public String toString() {
         return "Болид №" + numberCar;
     }
-
     @Override
     public Car call() {
+
+        Random random = new Random();
+        try {
+            Thread.sleep(random.nextInt(10, 2000));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         System.out.printf("%s на старте! %n", this);
+        phaser.arriveAndAwaitAdvance();
         var lastLength = lengthRoute % speed;
         phaser.arriveAndAwaitAdvance();
+        var time = lengthRoute*1.0/speed;
         while (lengthRoute > lastLength) {
             try {
                 Thread.sleep(1000);
@@ -61,7 +64,9 @@ public class Car implements Callable<Car> {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        setWinner(numberCar);
         System.out.printf("Финишировал: %s время %.2f %n", this, time);
+        phaser.arriveAndDeregister();
         return this;
     }
 }

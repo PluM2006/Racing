@@ -9,13 +9,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
 
 public class App {
-    private static final Phaser phaser = new Phaser();
+    private static final Phaser phaser = new Phaser(1);
 
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         Random random = new Random();
@@ -26,10 +25,10 @@ public class App {
         Integer lengthRoute = Integer.parseInt(reader.readLine());
         ExecutorService executorService = Executors.newFixedThreadPool(amountCar);
         List<Future<?>> futures = new ArrayList<>();
-        phaser.register();
         for (int i = 0; i < amountCar; i++) {
             futures.add(executorService.submit(new Car(random.nextInt(30, 60), lengthRoute, phaser)));
         }
+        phaser.arriveAndAwaitAdvance();
         Thread.sleep(1000);
         System.out.println("3");
         Thread.sleep(1000);
@@ -37,19 +36,14 @@ public class App {
         Thread.sleep(1000);
         System.out.println("1");
         Thread.sleep(1000);
-        System.out.println("СТАРТ");
-        phaser.arrive();
-        List<Car> cars = new ArrayList<>();
+        System.out.println("СТАРТ!");
+        phaser.arriveAndDeregister();
         for (Future<?> future : futures) {
-            cars.add((Car) future.get());
+            future.get();
         }
         executorService.shutdown();
         if (executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-            Car winner = cars
-                    .stream()
-                    .min(Comparator.comparingDouble(Car::getTime))
-                    .orElse(null);
-            System.out.printf("%n В ГОНКЕ ПОБЕДИЛ %s !!!%n", winner);
+            System.out.printf("%n!!! В ГОНКЕ ПОБЕДИЛ БОЛИД №%s !!!%n", Car.winner);
         }
 
     }
